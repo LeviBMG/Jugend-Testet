@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Startseite — Tachometer Auswahl</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1724;--accent:#60a5fa;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;background:linear-gradient(180deg,#071022 0%, #081123 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center}
+    .container{width:820px;max-width:96vw;padding:28px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 12px 40px rgba(2,6,23,0.6)}
+    h1{margin:0 0 6px;font-size:20px}
+    p{margin:0 0 18px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .card{background:var(--card);padding:14px;border-radius:10px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+    .card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,23,0.5)}
+    .icon{font-size:28px;margin-bottom:8px}
+    .label{font-weight:700}
+    .sub{font-size:12px;color:var(--muted);margin-top:6px}
+    .footer{margin-top:16px;display:flex;gap:8px;align-items:center}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:#cbd5e1;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tachometer — Auswahl</h1>
+    <p>Wähle einen Anbieter aus, um die entsprechende Tachometer-Datei zu öffnen. Alle Dateien sollten im selben Ordner liegen wie diese Indexdatei.</p>
+
+    <div class="grid">
+      <div class="card" data-file="chatgpt tachometer.html" onclick="openFile(this)">
+        <div class="icon">🤖</div>
+        <div class="label">ChatGPT</div>
+        <div class="sub">chatgpt tachometer.html</div>
+      </div>
+
+      <div class="card" data-file="gemini tachometer.html" onclick="openFile(this)">
+        <div class="icon">🧭</div>
+        <div class="label">Gemini</div>
+        <div class="sub">gemini tachometer.html</div>
+      </div>
+
+      <div class="card" data-file="copilot tachometer.html" onclick="openFile(this)">
+        <div class="icon">🛠️</div>
+        <div class="label">Copilot</div>
+        <div class="sub">copilot tachometer.html</div>
+      </div>
+
+      <div class="card" data-file="perplexity tachometer.html" onclick="openFile(this)">
+        <div class="icon">🔎</div>
+        <div class="label">Perplexity</div>
+        <div class="sub">perplexity tachometer.html</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn" onclick="openAll()">Alle in neuen Tabs öffnen</button>
+      <div style="flex:1"/>
+      <div class="sub">Hinweis: Wenn die Dateien andere Namen haben, benenne sie bitte um oder passe die Index-Datei an.</div>
+    </div>
+  </div>
+
+<script>
+function openFile(el){
+  const file = el.getAttribute('data-file');
+  // try opening in same tab
+  window.location.href = encodeURI(file);
+}
+
+function openAll(){
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => {
+    const file = c.getAttribute('data-file');
+    window.open(encodeURI(file), '_blank');
+  });
+}
+</script>
+</body>
+</html>

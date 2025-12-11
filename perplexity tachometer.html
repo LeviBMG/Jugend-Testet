@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tachometer 0–100 km/h</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    .speedometer {
+      position: relative;
+      width: 300px;
+      height: 150px;
+      border-radius: 300px 300px 0 0;
+      background: #222;
+      overflow: hidden;
+      box-shadow: 0 0 20px #000;
+    }
+
+    /* Skala */
+    .scale {
+      position: absolute;
+      inset: 20px;
+      border-radius: 300px 300px 0 0;
+      border-top: 6px solid #555;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+    }
+
+    /* Nadel */
+    .needle {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 4px;
+      height: 130px;
+      background: #e74c3c;
+      transform-origin: bottom center;
+      transform: rotate(-90deg); /* Start bei 0 km/h */
+      transition: transform 0.05s linear;
+    }
+
+    /* Mittelpunkt */
+    .hub {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      background: #333;
+      border-radius: 50%;
+      transform: translate(-50%, 50%);
+      border: 3px solid #e74c3c;
+      box-shadow: 0 0 8px #e74c3c;
+    }
+
+    .speed-text {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 20px;
+    }
+
+    .unit {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="speedometer">
+    <div class="scale"></div>
+    <div class="needle" id="needle"></div>
+    <div class="hub"></div>
+    <div class="speed-text">
+      <span id="speedValue">0</span> <span class="unit">km/h</span>
+    </div>
+  </div>
+
+  <script>
+    const needle = document.getElementById("needle");
+    const speedValue = document.getElementById("speedValue");
+
+    let speed = 0;
+    let direction = 1; // 1 = hochzählen, -1 = runterzählen
+
+    // Mapping: 0 km/h = -90°, 100 km/h = +90°
+    function updateNeedle(value) {
+      const minDeg = -90;
+      const maxDeg = 90;
+      const angle = minDeg + (value / 100) * (maxDeg - minDeg);
+      needle.style.transform = `rotate(${angle}deg)`;
+      speedValue.textContent = Math.round(value);
+    }
+
+    function animate() {
+      speed += direction;
+
+      if (speed >= 100) {
+        speed = 100;
+        direction = -1;
+      } else if (speed <= 0) {
+        speed = 0;
+        direction = 1;
+      }
+
+      updateNeedle(speed);
+      requestAnimationFrame(animate);
+    }
+
+    updateNeedle(speed);
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

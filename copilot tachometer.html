@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tachometer 0–100 km/h</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --ring: #1f2937;
+      --accent: #10b981;
+      --needle: #ef4444;
+      --text: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(1000px 600px at 50% 20%, #111827, var(--bg));
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      color: var(--text);
+    }
+
+    .dash {
+      width: 420px;
+      max-width: 90vw;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 10px 30px rgba(0,0,0,0.4));
+    }
+
+    /* Outer ring */
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(closest-side, transparent 59.9%, rgba(255,255,255,0.06) 60% 60.6%, transparent 60.7%),
+        conic-gradient(from 210deg, /* arc background */
+          #0b1222 0deg, #0b1222 120deg, transparent 120deg 360deg);
+      box-shadow:
+        inset 0 0 0 6px #0b1222,
+        inset 0 0 0 16px #0a0f1a,
+        inset 0 0 40px rgba(0,0,0,0.6);
+    }
+
+    /* Ticks */
+    .ticks {
+      position: absolute;
+      inset: 10%;
+      border-radius: 50%;
+    }
+
+    .tick {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3px;
+      height: 18px;
+      background: #93c5fd;
+      transform-origin: 0% -130px; /* anchor outside center for arc */
+      border-radius: 2px;
+      opacity: 0.7;
+    }
+
+    .tick.major {
+      width: 4px;
+      height: 28px;
+      background: #c4b5fd;
+      opacity: 1;
+    }
+
+    /* Labels */
+    .label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      color: #c7d2fe;
+      font-weight: 600;
+      transform-origin: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    /* Center hub */
+    .hub {
+      position: absolute;
+      width: 34%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #0d1424, #030712 60%);
+      box-shadow:
+        inset 0 0 15px rgba(255,255,255,0.05),
+        inset 0 0 60px rgba(0,0,0,0.7);
+      display: grid;
+      place-items: center;
+    }
+
+    /* Needle */
+    .needle {
+      position: absolute;
+      width: 2px;
+      height: 42%;
+      background: linear-gradient(#fecaca, var(--needle));
+      top: 8%;
+      left: 50%;
+      transform-origin: 50% 92%;
+      transform: rotate(-120deg);
+      border-radius: 2px;
+      filter: drop-shadow(0 2px 6px rgba(239,68,68,0.5));
+    }
+
+    /* Needle cap */
+    .cap {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #111827;
+      border: 2px solid #374151;
+      box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    }
+
+    /* Readout */
+    .readout {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0b1222;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #e5e7eb;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+    }
+
+    .unit {
+      font-weight: 500;
+      color: #9ca3af;
+      margin-left: 6px;
+    }
+
+    /* Accent arc showing progress */
+    .progress {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      mask: radial-gradient(closest-side, transparent 59.7%, black 60%);
+    }
+
+    .progress svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(210deg); /* start at -120deg in conic terms */
+    }
+
+    .progress path {
+      stroke: var(--accent);
+      stroke-width: 14;
+      stroke-linecap: round;
+      fill: none;
+      filter: drop-shadow(0 0 8px rgba(16,185,129,0.6));
+    }
+  </style>
+</head>
+<body>
+  <div class="dash" aria-label="Tachometer 0 bis 100 km/h">
+    <div class="ring"></div>
+
+    <!-- Ticks (0..100 in steps of 10, with minors of 5) -->
+    <div class="ticks" id="ticks"></div>
+
+    <!-- Dynamic progress arc -->
+    <div class="progress" aria-hidden="true">
+      <svg viewBox="0 0 100 100">
+        <!-- Arc path is a semicircle (approx), we’ll animate stroke-dashoffset -->
+        <path id="arc" d="M 20 80 A 40 40 0 1 1 80 80" />
+      </svg>
+    </div>
+
+    <!-- Labels -->
+    <div class="label" id="labels"></div>
+
+    <!-- Needle -->
+    <div class="needle" id="needle"></div>
+    <div class="hub">
+      <div class="cap"></div>
+    </div>
+
+    <!-- Readout -->
+    <div class="readout">
+      <span id="value">0</span><span class="unit">km/h</span>
+    </div>
+  </div>
+
+  <script>
+    // Config
+    const MIN = 0;
+    const MAX = 100;
+    const START_DEG = -120; // gauge start angle
+    const END_DEG = 120;    // gauge end angle
+    const DURATION_UP = 2000;   // ms from 0 -> 100
+    const DURATION_DOWN = 2000; // ms from 100 -> 0
+    const TICK_MAJOR_STEP = 10;
+    const TICK_MINOR_STEP = 5;
+
+    const needleEl = document.getElementById('needle');
+    const valueEl  = document.getElementById('value');
+    const ticksEl  = document.getElementById('ticks');
+    const labelsEl = document.getElementById('labels');
+    const arcEl    = document.getElementById('arc');
+
+    // Prepare ticks and labels
+    function angleFor(v) {
+      const t = (v - MIN) / (MAX - MIN);
+      return START_DEG + t * (END_DEG - START_DEG);
+    }
+
+    function placeTick(value, major = false) {
+      const tick = document.createElement('div');
+      tick.className = 'tick' + (major ? ' major' : '');
+      const a = angleFor(value);
+      const r = 150; // pseudo radius for transform-origin
+      tick.style.transform = `rotate(${a}deg) translateX(${r}px)`;
+      ticksEl.appendChild(tick);
+
+      if (major) {
+        const lbl = document.createElement('div');
+        lbl.className = 'label';
+        lbl.textContent = value.toString();
+        const labelRadius = 175;
+        lbl.style.transform = `rotate(${a}deg) translate(${labelRadius}px, -12px) rotate(${-a}deg)`;
+        labelsEl.appendChild(lbl);
+      }
+    }
+
+    for (let v = MIN; v <= MAX; v += TICK_MINOR_STEP) {
+      const isMajor = v % TICK_MAJOR_STEP === 0;
+      placeTick(v, isMajor);
+    }
+
+    // Arc stroke length setup
+    const length = arcEl.getTotalLength();
+    arcEl.style.strokeDasharray = length;
+    arcEl.style.strokeDashoffset = length;
+
+    function setGauge(value) {
+      const clamped = Math.max(MIN, Math.min(MAX, value));
+      const a = angleFor(clamped);
+      needleEl.style.transform = `rotate(${a}deg)`;
+
+      // Update readout
+      valueEl.textContent = Math.round(clamped);
+
+      // Update progress arc (0..100% of semicircle)
+      const progress = (clamped - MIN) / (MAX - MIN);
+      arcEl.style.strokeDashoffset = length * (1 - progress);
+    }
+
+    // Easing (smooth in-out)
+    function easeInOutQuad(t) {
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
+
+    // Animate from start to end over duration, then call done()
+    function animateRange(from, to, duration, done) {
+      const start = performance.now();
+      function step(now) {
+        const elapsed = now - start;
+        const t = Math.min(1, elapsed / duration);
+        const eased = easeInOutQuad(t);
+        const current = from + (to - from) * eased;
+        setGauge(current);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          done && done();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Loop: up to 100, down to 0, repeat
+    function loop() {
+      animateRange(MIN, MAX, DURATION_UP, () => {
+        animateRange(MAX, MIN, DURATION_DOWN, loop);
+      });
+    }
+
+    // Start
+    setGauge(0);
+    loop();
+  </script>
+</body>
+</html>

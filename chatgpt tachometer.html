@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tachometer (0 → 100 → 0)</title>
+  <style>
+    :root{--bg:#0f1720;--gauge:#111827;--accent:#10b981;--needle:#ef4444;--meter-text:#e5e7eb}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:linear-gradient(180deg,#071022 0%, #0b1220 100%);color:var(--meter-text);display:flex;align-items:center;justify-content:center}
+    .wrap{width:640px;max-width:94vw;padding:24px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+    h1{margin:0 0 10px;font-size:18px;font-weight:600;color:#d1fae5}
+    p{margin:0 0 18px;color:#94a3b8}
+    canvas{display:block;margin:0 auto;background:transparent}
+    .controls{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:#cbd5e1;cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+    .valueDisplay{font-size:28px;font-weight:700;color:var(--meter-text)}
+    .small{font-size:12px;color:#93c5fd}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Tachometer — 0 → 100 → 0</h1>
+    <p>Öffne die Datei im Browser. Der Zeiger fährt automatisch von 0 auf 100 km/h und wieder zurück in einer Endlosschleife.</p>
+
+    <canvas id="gauge" width="600" height="360" aria-label="Tachometer"></canvas>
+
+    <div class="controls">
+      <button class="btn" id="startStop">Pause</button>
+      <div class="valueDisplay" id="speedText">0 km/h</div>
+      <div class="small">Geschwindigkeit anpassen:</div>
+      <input id="duration" type="range" min="1000" max="8000" step="100" value="3000">
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gauge');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h*0.68; // center of arc
+  const radius = Math.min(w,h)*0.42;
+  const startDeg = -120, endDeg = 120; // degrees for the gauge
+  const maxValue = 100;
+  const speedText = document.getElementById('speedText');
+  const startStopBtn = document.getElementById('startStop');
+  const durationSlider = document.getElementById('duration');
+
+  let running = true;
+  startStopBtn.addEventListener('click', () => { running = !running; startStopBtn.textContent = running ? 'Pause' : 'Start'; if(running) loop(); });
+
+  function degToRad(d){ return d * Math.PI/180; }
+  function valueToAngle(v){ const t = v / maxValue; return degToRad(startDeg + (endDeg - startDeg)*t); }
+
+  function drawBackground(){
+    ctx.clearRect(0,0,w,h);
+
+    // glow circle
+    ctx.save();
+    const g = ctx.createRadialGradient(cx, cy-radius*0.2, radius*0.05, cx, cy, radius*1.2);
+    g.addColorStop(0,'rgba(16,185,129,0.06)');
+    g.addColorStop(1,'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, radius*1.25, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // outer arc
+    ctx.beginPath();
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.arc(cx, cy, radius, degToRad(180+startDeg), degToRad(180+endDeg));
+    ctx.stroke();
+
+    // ticks and numbers
+    const major = 10; // major tick every 10 units
+    for(let v=0; v<=maxValue; v+=1){
+      const ang = valueToAngle(v) + Math.PI; // rotate so 0 at left-bottom
+      const outer = polar(cx,cy,radius,ang);
+      const inner = polar(cx,cy,radius - (v%major===0 ? 28 : 16), ang);
+      ctx.beginPath(); ctx.moveTo(outer.x, outer.y); ctx.lineTo(inner.x, inner.y);
+      ctx.lineWidth = (v%major===0 ? 3 : 1.4);
+      ctx.strokeStyle = (v%major===0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.22)');
+      ctx.stroke();
+
+      if(v%major===0){
+        const numPos = polar(cx,cy,radius - 52, ang);
+        ctx.font = '14px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(226,232,240,0.9)';
+        ctx.fillText(String(v), numPos.x, numPos.y);
+      }
+    }
+
+    // center cover
+    ctx.beginPath(); ctx.fillStyle = 'rgba(2,6,23,0.9)'; ctx.arc(cx, cy, 46, 0, Math.PI*2); ctx.fill();
+  }
+
+  function polar(cx,cy,r,ang){ return { x: cx + Math.cos(ang)*r, y: cy + Math.sin(ang)*r } }
+
+  function drawNeedle(value){
+    const ang = valueToAngle(value) + Math.PI; // add Pi to rotate correctly
+    const tip = polar(cx,cy, radius - 48, ang);
+
+    // shadow
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(tip.x, tip.y); ctx.lineWidth = 12; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.stroke();
+
+    // needle
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(tip.x, tip.y); ctx.lineWidth = 6; ctx.strokeStyle = '#ef4444'; ctx.stroke();
+
+    // needle center pin
+    ctx.beginPath(); ctx.fillStyle = '#111827'; ctx.arc(cx,cy,10,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.fillStyle = '#f8fafc'; ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawValueText(value){
+    speedText.textContent = Math.round(value) + ' km/h';
+  }
+
+  function render(value){
+    drawBackground();
+    drawNeedle(value);
+    drawValueText(value);
+  }
+
+  // animation helper with easing
+  function animateValue(from, to, duration, onUpdate, onDone){
+    const start = performance.now();
+    function step(t){
+      const p = Math.min(1, (t-start)/duration);
+      // easeInOutCubic
+      const eased = p<0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2,3)/2;
+      const cur = from + (to-from)*eased;
+      onUpdate(cur);
+      if(p<1) requestAnimationFrame(step);
+      else if(onDone) onDone();
+    }
+    requestAnimationFrame(step);
+  }
+
+  let loopId = 0;
+  function loop(){
+    if(!running) return;
+    const dur = Number(durationSlider.value) || 3000;
+    // go up
+    animateValue(0, 100, dur, v => { render(v); }, () => {
+      // brief hold at 100
+      setTimeout(() => {
+        // go down
+        animateValue(100, 0, dur, v => { render(v); }, () => {
+          // brief hold at 0 then repeat
+          setTimeout(() => { if(running) loop(); }, 300);
+        });
+      }, 300);
+    });
+  }
+
+  // initial draw
+  render(0);
+  // start automatic loop
+  loop();
+
+  // redraw on slider change
+  durationSlider.addEventListener('input', ()=>{});
+
+  // accessibility: allow space to pause
+  window.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); startStopBtn.click(); } });
+
+})();
+</script>
+</body>
+</html>
